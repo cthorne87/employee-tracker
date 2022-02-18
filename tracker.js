@@ -37,7 +37,7 @@ const trackerStart = () => {
             }
             console.table(departments);
             console.log("\n");
-            initWork();
+            trackerStart();
           })
         } else if (selection === initChoices[1]) { //View roles
           const sql = 
@@ -57,21 +57,21 @@ const trackerStart = () => {
             }
             console.table(roles);
             console.log("\n");
-            initWork();
+            trackerStart();
           })
         } else if (selection === initChoices[2]){ //View employees
           const sql = 
           `
           SELECT 
-          concat(emp.first_name, " ", emp.last_name) AS Name,
-          concat(mang.first_name, " ", mang.last_name) AS 'Manager Name',
+          concat(employee.first_name, " ", employee.last_name) AS Name,
+          concat(manager.first_name, " ", manager.last_name) AS 'Manager Name',
           role.title AS 'Job Title',
           role.salary AS 'Salary',
           department.name AS 'Department'
-          FROM employee emp
-          LEFT JOIN role ON emp.role_id = role.id
-          LEFT JOIN department ON emp.role_id = department.id
-          LEFT JOIN employee mang ON emp.manager_id = mang.id
+          FROM employee 
+          LEFT JOIN role ON employee.role_id = role.id
+          LEFT JOIN department ON role.department_id = department.id
+          LEFT JOIN employee manager ON employee.manager_id = manager.id
           `
   
           db.query(sql, (err, employees) => {
@@ -81,7 +81,7 @@ const trackerStart = () => {
             }
             console.table(employees);
             console.log("\n");
-            initWork();
+            trackerStart();
           })
         } else if (selection === initChoices[3]){ //add new department
           addDepartment();
@@ -98,6 +98,176 @@ const trackerStart = () => {
       })
   }
 
+const addDepartment = async () => {
+    const deptData = await inquirer.prompt([
+      {
+        type: "input",
+        name: "name",
+        message: "What is the new department?",
+        validate: input => {
+          if(input) {
+            return true;
+          } else {
+            console.log("Please enter a department name.");
+            return false;
+          }
+        }
+      }
+    ]);
+    await db.promise().query('INSERT INTO department SET ?', deptData);
+    trackerStart();
+  }
 
+const addRole = async () => {
+    const departments = await db.promise().query('SELECT * FROM department');
+    const departmentMap = await departments[0].map(({id, name}) => ({
+      name: name,
+      value: id
+    }));
+  
+    const roleData = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'title',
+        message: 'What is the new title of the role?',
+        validate: input => {
+          if(input) {
+            return true;
+          } else {
+            console.log("Please enter a title.");
+            return false;
+          }
+        }
+      },
+      {
+        type: 'input',
+        name: 'salary',
+        message: 'What is the salary?',
+        validate: input => {
+          if(input) {
+            return true;
+          } else {
+            console.log("Please enter a salary.");
+            return false;
+          }
+        }
+      },
+      {
+        type: 'list',
+        name: 'department_id',
+        message: 'What department would you like to add the role to?',
+        choices: departmentMap
+      }
+    ]);
+    await db.promise().query('INSERT INTO role SET ?', roleData);
+    trackerStart();
+  }
+
+const addEmployee = async () => {
+    const managers = await db.promise().query(
+      `
+      SELECT 
+      * 
+      FROM employee
+      `);
+    const managersMap = await managers[0].map(({id, first_name, last_name, role_id, manager_id}) => ({
+      name: `${first_name} ${last_name}`,
+      value: id
+    }))
+    const roles = await db.promise().query(
+      `
+      SELECT 
+      * 
+      FROM role
+      `);
+    const rolesMap = await roles[0].map(({id, title, salary, department_id}) => ({
+      name: title,
+      value: id
+    }))
+    const employeeData = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'first_name',
+        message: "What's their first name?",
+        validate: input => {
+          if(input) {
+            return true;
+          } else {
+            console.log("Please enter a first name.");
+            return false;
+          }
+        }
+      },
+      {
+        type: 'input',
+        name: 'last_name',
+        message: "What's their last name?",
+        validate: input => {
+          if(input) {
+            return true;
+          } else {
+            console.log("Please enter a last name.");
+            return false;
+          }
+        }
+      },
+      {
+        type: 'list',
+        name: 'role_id',
+        message: "What's their role?",
+        choices: rolesMap
+      },
+      {
+        type: 'list',
+        name: 'manager_id',
+        message: "Who's their manager?",
+        choices: managersMap
+      }
+    ]);
+    await db.promise().query('INSERT INTO employee SET ?', employeeData);
+    trackerStart();
+}
+
+const updateEmployee = async () => {
+
+    const employees = await db.promise().query(
+      `
+      SELECT 
+      * 
+      FROM employee
+      `);
+    const employeesMap = await employees[0].map(({id, first_name, last_name, role_id, manager_id}) => ({
+      name: `${first_name} ${last_name}`,
+      value: id
+    }))
+  
+    const roles = await db.promise().query(
+      `
+      SELECT 
+      * 
+      FROM role
+      `);
+    const rolesMap = await roles[0].map(({id, title, salary, department_id}) => ({
+      name: title,
+      value: id
+    }))
+  
+    const employeeData = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'id',
+        message: 'Which employee do you want to edit?',
+        choices: employeesMap
+      },
+      {
+        type: 'list',
+        name: 'role_id',
+        message: 'What role will they be?',
+        choices: rolesMap
+      }
+    ])
+    await db.promise().query(`UPDATE employee SET role_id = ${employeeData.role_id} WHERE id = ${employeeData.id}`);
+    initWork();
+  }
   
 module.exports = trackerStart;
