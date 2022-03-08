@@ -267,7 +267,7 @@ const updateEmployee = async () => {
       }
     ])
     await db.promise().query(`UPDATE employee SET role_id = ${employeeData.role_id} WHERE id = ${employeeData.id}`);
-    initWork();
+    trackerStart();
   }
   
 module.exports = trackerStart;
