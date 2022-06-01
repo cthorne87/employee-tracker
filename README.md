@@ -7,13 +7,6 @@ This app is designed to help a company track their personnel. It can be used to 
 
 ---
 
-## What I did
-
-Used Node.js for the backend  
-Used SQL/MySQL2 for the database
-Used inquirer for command line input
-
----
 
 ## Built with
 
